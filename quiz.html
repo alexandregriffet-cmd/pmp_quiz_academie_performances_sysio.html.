@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMP – Questionnaire</title>
+<meta name="description" content="Questionnaire PMP – résultat immédiat puis redirection vers le profil détaillé.">
+<style>
+  :root{--bg:#F6F7FB;--surface:#fff;--text:#0E1116;--muted:#6B7280;--brand:#0E1116;--accent:#2B79C2;--radius:14px;--max:980px}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif}
+  header{background:linear-gradient(180deg,#0E1116,#1B2230);color:#fff;padding:20px 16px}
+  .wrap{max-width:var(--max);margin:0 auto}
+  main{max-width:var(--max);margin:20px auto;padding:0 16px 48px}
+  .card{background:var(--surface);border-radius:var(--radius);box-shadow:0 10px 28px rgba(0,0,0,.08);padding:20px;margin:12px 0}
+  h1,h2{margin:.2rem 0 .8rem} .muted{color:var(--muted)}
+  .grid{display:grid;gap:16px} .cols-2{grid-template-columns:1fr 1fr} @media(max-width:900px){.cols-2{grid-template-columns:1fr}}
+  .item{padding:12px;border:1px solid #ECEFF6;border-radius:12px}
+  .tag{display:inline-block;border:1px solid #E2E6F0;border-radius:999px;padding:.18rem .55rem;font-size:.8rem;background:#F5F7FD;margin-right:.3rem}
+  .scale{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  input[type=radio]{accent-color:var(--brand)}
+  .progress{height:8px;background:#E9ECF4;border-radius:999px;overflow:hidden;margin-bottom:10px}
+  .progress>span{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .btn{display:inline-flex;gap:.5rem;align-items:center;background:var(--brand);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+  .btn.secondary{background:#E9ECF5;color:#111}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Questionnaire PMP</h1>
+  <p class="muted">NRJ • Vision • Décision • Organisation</p>
+</div></header>
+
+<main class="wrap">
+  <section class="card">
+    <h2>Section A — Axes PMP</h2>
+    <p class="muted">4 axes : NRJ (Externe ↔ Interne), Vision (Concrète ↔ Globale), Décision (Logique ↔ Valeurs), Organisation (Planifiée ↔ Flexible).</p>
+    <div class="progress"><span id="barA"></span></div>
+    <div id="axes"></div>
+  </section>
+  <section class="card">
+    <h2>Section B — Styles de communication</h2>
+    <p class="muted">6 styles : Relationnel, Structurel, Convictions, Autonomie, Spontanéité, Action.</p>
+    <div class="progress"><span id="barB"></span></div>
+    <div id="styles"></div>
+  </section>
+  <section class="card">
+    <button id="compute" class="btn">Voir mon résultat</button>
+    <button id="reset" class="btn secondary">Réinitialiser</button>
+  </section>
+  <section id="output" class="card" style="display:none">
+    <h2>Résultat</h2>
+    <p id="summary"></p>
+  </section>
+</main>
+
+<script>
+// Items (identiques à la version PMP précédente, condensés)
+const AXES_ITEMS = {
+  "NRJ (Externe ↔ Interne)": [
+    "Je recharge mon énergie plutôt en étant seul qu'avec un groupe.",
+    "Je préfère des conversations en tête-à-tête plutôt que des grands débats.",
+    "Je parle après avoir réfléchi longuement.",
+    "Les fêtes bruyantes me fatiguent plus qu'elles ne m'enthousiasment.",
+    "Je garde souvent mes idées pour moi avant de les partager.",
+    "Je préfère écrire un message plutôt que passer un coup de fil.",
+    "Je passe beaucoup de temps à l'intérieur de mes pensées.",
+    "Je choisis des activités calmes plutôt que très stimulantes.",
+    "Je suis sélectif dans mes relations sociales.",
+    "On me décrit souvent comme réservé.",
+    "Je réfléchis avant d'agir spontanément.",
+    "Les interactions sociales prolongées m'épuisent.",
+    "Je préfère écouter plutôt que parler en groupe.",
+    "Je me sens à l'aise dans des environnements peu stimulants.",
+    "Je travaille mieux seul que dans des équipes nombreuses."
+  ],
+  "Vision (Concrète ↔ Globale)": [
+    "Je me fie d'abord aux faits concrets plutôt qu'aux possibilités.",
+    "Je préfère des instructions détaillées et précises.",
+    "J'apprécie les exemples concrets plus que les théories.",
+    "Je me concentre sur le présent plutôt que sur l'avenir lointain.",
+    "Je remarque les détails pratiques rapidement.",
+    "Je préfère des méthodes éprouvées aux approches nouvelles.",
+    "Je fais confiance à ce que je peux observer directement.",
+    "Je privilégie l'expérience vécue aux spéculations.",
+    "Je procède étape par étape plutôt que par grands sauts.",
+    "Je préfère des solutions réalistes aux idées abstraites.",
+    "Je suis sensible aux faits mesurables.",
+    "Je décris les choses telles qu'elles sont, pas comme elles pourraient être.",
+    "Je cherche des données tangibles avant de décider.",
+    "Je m'intéresse d'abord au 'comment' plutôt qu'au 'et si'.",
+    "Je privilégie la précision et la fiabilité des informations."
+  ],
+  "Décision (Logique ↔ Valeurs)": [
+    "Je base mes décisions sur la logique plutôt que sur l'impact émotionnel.",
+    "Je valorise la cohérence plus que l'harmonie.",
+    "Je préfère des critères objectifs aux impressions subjectives.",
+    "Je dis les choses franchement, même si cela peut gêner.",
+    "Je cherche ce qui est juste, pas nécessairement ce qui fait plaisir.",
+    "Je critique pour améliorer, pas pour blesser.",
+    "Je suis à l'aise avec le débat et la confrontation d'idées.",
+    "Je prends de la distance pour analyser un problème.",
+    "Je défends la logique même sous pression émotionnelle.",
+    "Je tranche selon des principes, pas selon les personnes.",
+    "Je privilégie l'efficacité à la délicatesse dans l'urgence.",
+    "Je me demande d'abord si c'est rationnel, ensuite si c'est agréable.",
+    "Je structure ma pensée avant d'écouter mes ressentis.",
+    "Je valorise la vérité plutôt que l'approbation.",
+    "Je préfère des feedbacks directs et précis."
+  ],
+  "Organisation (Planifiée ↔ Flexible)": [
+    "J'aime planifier et décider tôt plutôt que garder toutes les options ouvertes.",
+    "Je me sens mieux avec des listes et des échéances claires.",
+    "Je préfère clore un sujet plutôt que le laisser en suspens.",
+    "Je suis ponctuel et respecte les délais.",
+    "Je décompose les projets en étapes planifiées.",
+    "J'aime quand les choses sont organisées et prévisibles.",
+    "Je prépare à l'avance plutôt que d'improviser.",
+    "Je préfère suivre un plan plutôt que saisir les opportunités au vol.",
+    "Je range pour mieux me concentrer.",
+    "Je fixe des objectifs et j'en fais le suivi.",
+    "J'apprécie les procédures établies.",
+    "Je décide rapidement pour avancer.",
+    "Je clarifie qui fait quoi et quand.",
+    "Je n'aime pas laisser traîner les décisions.",
+    "Je préfère des routines stables."
+  ]
+};
+
+const STYLES_ITEMS = {
+  "Relationnel": [
+    "Je capte facilement les émotions des autres.",
+    "Je cherche l'harmonie dans les relations.",
+    "Je soutiens spontanément ceux qui en ont besoin.",
+    "Je privilégie la bienveillance dans mes messages.",
+    "Je me sens utile quand j'apporte du réconfort.",
+    "Je m'épanouis dans une ambiance chaleureuse."
+  ],
+  "Structurel": [
+    "J'aime structurer, organiser et planifier.",
+    "Je m'appuie sur des faits et des données.",
+    "Je clarifie les objectifs et les critères.",
+    "J'apprécie les procédures et les processus.",
+    "Je me sens à l'aise avec l'analyse logique.",
+    "Je propose des plans détaillés pour avancer."
+  ],
+  "Convictions": [
+    "Je défends mes valeurs avec constance.",
+    "Je tiens mes engagements coûte que coûte.",
+    "J'observe et j'évalue avec exigence.",
+    "Je donne mon opinion sur le fond des sujets.",
+    "Je cherche la cohérence entre paroles et actes.",
+    "Je suis persévérant face aux obstacles."
+  ],
+  "Autonomie": [
+    "J'ai besoin de temps seul pour réfléchir.",
+    "Je trouve des idées en rêvassant ou en me retirant.",
+    "Je produis mieux dans le calme et sans pression.",
+    "Je préfère un brief clair pour travailler en autonomie.",
+    "Je réfléchis longtemps avant d'agir.",
+    "Je visualise des solutions possibles sans parler beaucoup."
+  ],
+  "Spontanéité": [
+    "J'apporte de l'humour et de la spontanéité au groupe.",
+    "Je réagis fort à ce qui est fun ou ennuyeux.",
+    "Je démarre quand quelque chose m'inspire.",
+    "Je propose des idées originales sur le vif.",
+    "Je me démotive si c'est trop sérieux trop longtemps.",
+    "Je mobilise les autres par l'énergie et le jeu."
+  ],
+  "Action": [
+    "Je passe vite à l'action et j'apprends en faisant.",
+    "Je garde mon sang-froid dans l'urgence.",
+    "Je prends des initiatives sans hésiter.",
+    "Je négocie et je vends naturellement mes idées.",
+    "Je m'adapte vite pour atteindre le résultat.",
+    "Je sais décider avec les informations disponibles."
+  ]
+};
+
+// Scoring maps
+const AXES_MAP = {
+  "NRJ (Externe ↔ Interne)": {pos:"Interne", neg:"Externe", posKey:"I", negKey:"E"},
+  "Vision (Concrète ↔ Globale)": {pos:"Concrète", neg:"Globale", posKey:"C", negKey:"G"},
+  "Décision (Logique ↔ Valeurs)": {pos:"Logique", neg:"Valeurs", posKey:"L", negKey:"V"},
+  "Organisation (Planifiée ↔ Flexible)": {pos:"Planifiée", neg:"Flexible", posKey:"P", negKey:"F"}
+};
+
+// UI helpers
+function createScale(name, id){
+  const wrap = document.createElement('div'); wrap.className='scale';
+  [1,2,3,4,5].forEach(v=>{
+    const lab = document.createElement('label');
+    const inp = document.createElement('input'); inp.type='radio'; inp.name=name; inp.value=v; inp.id=id+'-'+v;
+    lab.htmlFor=inp.id; lab.appendChild(inp); lab.appendChild(document.createTextNode(' '+v));
+    wrap.appendChild(lab);
+  });
+  return wrap;
+}
+
+function renderSection(containerId, groups, prefix, onChange){
+  const root = document.getElementById(containerId); let idx=0;
+  Object.entries(groups).forEach(([group, items])=>{
+    const g = document.createElement('div');
+    const h = document.createElement('h4'); h.innerHTML = '<span class="tag">'+group+'</span>'; g.appendChild(h);
+    items.forEach((txt,i)=>{ idx++; const w=document.createElement('div'); w.className='item';
+      const p=document.createElement('p'); p.textContent=txt; w.appendChild(p);
+      const sc=createScale(prefix+'_'+group+'_'+(i+1), prefix+'_'+idx); w.appendChild(sc); g.appendChild(w);
+    });
+    root.appendChild(g);
+  });
+  root.addEventListener('change', onChange);
+}
+
+function countAnswered(prefix){
+  const inputs = Array.from(document.querySelectorAll('input[type=radio]')).filter(r=>r.name.startsWith(prefix+'_'));
+  const names = new Set(inputs.map(r=>r.name)); let answered=0; names.forEach(n=>{ if(inputs.find(r=>r.name===n && r.checked)) answered++; });
+  return {answered,total:names.size};
+}
+
+function updateBar(el, prefix){
+  const {answered,total} = countAnswered(prefix); el.style.width = (total ? answered*100/total : 0)+'%';
+}
+
+function getValueByName(name){
+  const nodes = document.getElementsByName(name);
+  for(const n of nodes){ if(n.checked) return parseInt(n.value,10); } return null;
+}
+
+// Compute PMP Code
+function computePMP(){
+  const axesScores = {};
+  Object.entries(AXES_ITEMS).forEach(([axe, items])=>{
+    let pos=0, neg=0; const map=AXES_MAP[axe];
+    items.forEach((_,i)=>{
+      const name='A_'+axe+'_'+(i+1); const val=getValueByName(name); if(val==null) return;
+      const s=val-3; if(s>0) pos+=s; else if(s<0) neg+=-s;
+    });
+    axesScores[axe]={pos,neg,map};
+  });
+  const code = [
+    axesScores["NRJ (Externe ↔ Interne)"].pos >= axesScores["NRJ (Externe ↔ Interne)"].neg ? "I":"E",
+    axesScores["Vision (Concrète ↔ Globale)"].pos >= axesScores["Vision (Concrète ↔ Globale)"].neg ? "C":"G",
+    axesScores["Décision (Logique ↔ Valeurs)"].pos >= axesScores["Décision (Logique ↔ Valeurs)"].neg ? "L":"V",
+    axesScores["Organisation (Planifiée ↔ Flexible)"].pos >= axesScores["Organisation (Planifiée ↔ Flexible)"].neg ? "P":"F",
+  ].join("");
+  return {code, axesScores};
+}
+
+function init(){
+  renderSection('axes', AXES_ITEMS, 'A', ()=>updateBar(document.getElementById('barA'),'A'));
+  renderSection('styles', STYLES_ITEMS, 'B', ()=>updateBar(document.getElementById('barB'),'B'));
+  updateBar(document.getElementById('barA'),'A'); updateBar(document.getElementById('barB'),'B');
+  document.getElementById('compute').addEventListener('click', ()=>{
+    const {code} = computePMP();
+    const out = document.getElementById('output'); out.style.display='block';
+    document.getElementById('summary').textContent = "Votre code PMP : "+code+" — redirection vers votre rapport détaillé…";
+    // Redirect to the detailed profile page
+    setTimeout(()=>{ window.location.href = "profils/"+code+".html"; }, 900);
+  });
+  document.getElementById('reset').addEventListener('click', ()=>{ location.reload(); });
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+</script>
+</body>
+</html>
